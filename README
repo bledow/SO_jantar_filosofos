@@ -1,0 +1,223 @@
+# Jantar dos Filósofos com OpenMP e Semáforos
+
+## Descrição
+
+Este projeto implementa uma simulação do problema clássico do **Jantar dos Filósofos**, utilizando a linguagem C com **OpenMP** e **semáforos**.
+
+O problema representa uma situação de concorrência em Sistemas Operacionais, onde vários processos ou threads disputam recursos compartilhados. Neste caso, os filósofos representam threads, e os hashis representam recursos compartilhados.
+
+Cada filósofo alterna entre os estados de:
+Pensando → Com fome → Comendo
+
+Para comer, cada filósofo precisa pegar dois hashis: o da esquerda e o da direita. Como os hashis são compartilhados entre filósofos vizinhos, é necessário controlar o acesso a esses recursos para evitar conflitos.
+
+---
+
+## Objetivo
+
+O objetivo do projeto é demonstrar conceitos de sincronização entre threads, como:
+
+* concorrência;
+* região crítica;
+* uso de semáforos;
+* exclusão mútua;
+* prevenção de race condition;
+* prevenção de deadlock.
+
+---
+
+## Tecnologias utilizadas
+
+* Linguagem C
+* OpenMP
+* Semáforos POSIX
+* GCC
+
+---
+
+## Funcionamento do programa
+
+O programa cria uma quantidade definida de filósofos usando OpenMP:
+#pragma omp parallel num_threads(NUM_FILOSOFOS)
+
+Cada filósofo é executado como uma thread paralela.
+
+Os hashis são representados por um vetor de semáforos:
+sem_t hashis[NUM_FILOSOFOS];
+
+Cada hashi é inicializado com valor 1, indicando que apenas um filósofo pode utilizá-lo por vez:
+sem_init(&hashis[i], 0, 1);
+
+Para evitar deadlock, foi utilizado um semáforo chamado `garcom`:
+sem_t garcom;
+
+Esse semáforo permite que no máximo `NUM_FILOSOFOS - 1` filósofos tentem pegar os hashis ao mesmo tempo:
+sem_init(&garcom, 0, NUM_FILOSOFOS - 1);
+
+---
+
+## Estratégia de sincronização
+
+A sincronização foi feita usando três elementos principais:
+
+### 1. Semáforos dos hashis
+
+Cada hashi é protegido por um semáforo. Assim, dois filósofos não conseguem pegar o mesmo hashi ao mesmo tempo.
+
+sem_wait(&hashis[hashiEsq]);
+sem_wait(&hashis[hashiDir]);
+
+Depois de comer, o filósofo libera os hashis:
+
+```c
+sem_post(&hashis[hashiEsq]);
+sem_post(&hashis[hashiDir]);
+```
+
+---
+
+### 2. Semáforo garçom
+
+O garçom limita a quantidade de filósofos tentando pegar hashis simultaneamente.
+
+```c
+sem_wait(&garcom);
+```
+
+Depois que o filósofo termina de comer, ele libera sua vaga:
+
+```c
+sem_post(&garcom);
+```
+
+Essa estratégia evita o deadlock clássico, onde todos os filósofos pegam um hashi e ficam esperando eternamente pelo outro.
+
+---
+
+### 3. Mutex para impressão
+
+O programa também utiliza um semáforo como mutex para proteger o `printf`.
+
+```c
+sem_wait(&mutexPrint);
+printf("Filosofo %d esta comendo\n", id);
+sem_post(&mutexPrint);
+```
+
+Isso evita que várias threads imprimam mensagens ao mesmo tempo, deixando a saída do terminal mais organizada.
+
+---
+
+## Trecho principal do código
+
+```c
+sem_wait(&garcom);
+
+sem_wait(&hashis[hashiEsq]);
+sem_wait(&hashis[hashiDir]);
+
+imprimirEstado(id, "esta comendo");
+
+qntRefeicoes[id]++;
+
+sem_post(&hashis[hashiEsq]);
+sem_post(&hashis[hashiDir]);
+
+sem_post(&garcom);
+```
+
+Neste trecho, o filósofo:
+
+1. pede autorização ao garçom;
+2. pega o hashi da esquerda;
+3. pega o hashi da direita;
+4. come;
+5. libera os hashis;
+6. libera sua vaga no garçom.
+
+---
+
+## Compilação
+
+Para compilar o programa, utilize:
+
+```bash
+gcc main.c -fopenmp -pthread -Wall -Wextra -o main
+```
+
+O parâmetro `-fopenmp` ativa o suporte ao OpenMP.
+
+O parâmetro `-pthread` é usado por causa dos semáforos POSIX.
+
+---
+
+## Execução
+
+Para executar o programa:
+
+```bash
+./main
+```
+
+---
+
+## Exemplo de saída
+
+```txt
+Iniciando o jantar dos filosofos...
+
+Filosofo 0 esta pensando
+Filosofo 1 esta pensando
+Filosofo 2 esta com fome
+Filosofo 2 esta comendo
+Filosofo 2 terminou de comer
+Filosofo 4 esta comendo
+Filosofo 4 terminou de comer
+
+Jantar finalizado.
+
+Relatorio final:
+Filosofo 0 comeu 3 vezes | Tempo total esperando: 0.0021 segundos
+Filosofo 1 comeu 3 vezes | Tempo total esperando: 0.0048 segundos
+Filosofo 2 comeu 3 vezes | Tempo total esperando: 0.0017 segundos
+Filosofo 3 comeu 3 vezes | Tempo total esperando: 0.0032 segundos
+Filosofo 4 comeu 3 vezes | Tempo total esperando: 0.0029 segundos
+```
+
+---
+
+## Problemas evitados
+
+### Race condition
+
+A race condition é evitada porque cada hashi é protegido por um semáforo. Dessa forma, dois filósofos não conseguem utilizar o mesmo hashi simultaneamente.
+
+### Deadlock
+
+O deadlock é evitado com o uso do semáforo `garcom`, que impede que todos os filósofos tentem pegar hashis ao mesmo tempo.
+
+### Saída desorganizada
+
+A saída do terminal é protegida por um mutex, impedindo que mensagens de diferentes threads sejam misturadas.
+
+---
+
+## Testes realizados
+
+O programa pode ser testado executando várias vezes e verificando se todos os filósofos conseguem comer a quantidade definida de refeições.
+
+Também é possível utilizar o comando:
+
+```bash
+timeout 10s ./main
+```
+
+Esse comando ajuda a verificar se o programa trava. Caso o programa finalize normalmente antes do tempo limite, significa que não ocorreu deadlock naquela execução.
+
+---
+
+## Conclusão
+
+Este projeto demonstra o uso de OpenMP e semáforos para resolver um problema clássico de sincronização.
+
+A implementação mostra como controlar o acesso a recursos compartilhados, evitar race conditions e prevenir deadlocks. O problema do jantar dos filósofos é uma forma prática de compreender conceitos fundamentais de Sistemas Operacionais e programação concorrente.
