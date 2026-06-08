@@ -69,10 +69,8 @@ sem_wait(&hashis[hashiDir]);
 
 Depois de comer, o filósofo libera os hashis:
 
-```c
 sem_post(&hashis[hashiEsq]);
 sem_post(&hashis[hashiDir]);
-```
 
 ---
 
@@ -80,15 +78,11 @@ sem_post(&hashis[hashiDir]);
 
 O garçom limita a quantidade de filósofos tentando pegar hashis simultaneamente.
 
-```c
 sem_wait(&garcom);
-```
 
 Depois que o filósofo termina de comer, ele libera sua vaga:
 
-```c
 sem_post(&garcom);
-```
 
 Essa estratégia evita o deadlock clássico, onde todos os filósofos pegam um hashi e ficam esperando eternamente pelo outro.
 
@@ -98,11 +92,9 @@ Essa estratégia evita o deadlock clássico, onde todos os filósofos pegam um h
 
 O programa também utiliza um semáforo como mutex para proteger o `printf`.
 
-```c
 sem_wait(&mutexPrint);
 printf("Filosofo %d esta comendo\n", id);
 sem_post(&mutexPrint);
-```
 
 Isso evita que várias threads imprimam mensagens ao mesmo tempo, deixando a saída do terminal mais organizada.
 
@@ -110,7 +102,6 @@ Isso evita que várias threads imprimam mensagens ao mesmo tempo, deixando a sa�
 
 ## Trecho principal do código
 
-```c
 sem_wait(&garcom);
 
 sem_wait(&hashis[hashiEsq]);
@@ -124,7 +115,6 @@ sem_post(&hashis[hashiEsq]);
 sem_post(&hashis[hashiDir]);
 
 sem_post(&garcom);
-```
 
 Neste trecho, o filósofo:
 
@@ -140,10 +130,7 @@ Neste trecho, o filósofo:
 ## Compilação
 
 Para compilar o programa, utilize:
-
-```bash
 gcc main.c -fopenmp -pthread -Wall -Wextra -o main
-```
 
 O parâmetro `-fopenmp` ativa o suporte ao OpenMP.
 
@@ -154,16 +141,12 @@ O parâmetro `-pthread` é usado por causa dos semáforos POSIX.
 ## Execução
 
 Para executar o programa:
-
-```bash
 ./main
-```
 
 ---
 
 ## Exemplo de saída
 
-```txt
 Iniciando o jantar dos filosofos...
 
 Filosofo 0 esta pensando
@@ -182,7 +165,6 @@ Filosofo 1 comeu 3 vezes | Tempo total esperando: 0.0048 segundos
 Filosofo 2 comeu 3 vezes | Tempo total esperando: 0.0017 segundos
 Filosofo 3 comeu 3 vezes | Tempo total esperando: 0.0032 segundos
 Filosofo 4 comeu 3 vezes | Tempo total esperando: 0.0029 segundos
-```
 
 ---
 
@@ -199,25 +181,3 @@ O deadlock é evitado com o uso do semáforo `garcom`, que impede que todos os f
 ### Saída desorganizada
 
 A saída do terminal é protegida por um mutex, impedindo que mensagens de diferentes threads sejam misturadas.
-
----
-
-## Testes realizados
-
-O programa pode ser testado executando várias vezes e verificando se todos os filósofos conseguem comer a quantidade definida de refeições.
-
-Também é possível utilizar o comando:
-
-```bash
-timeout 10s ./main
-```
-
-Esse comando ajuda a verificar se o programa trava. Caso o programa finalize normalmente antes do tempo limite, significa que não ocorreu deadlock naquela execução.
-
----
-
-## Conclusão
-
-Este projeto demonstra o uso de OpenMP e semáforos para resolver um problema clássico de sincronização.
-
-A implementação mostra como controlar o acesso a recursos compartilhados, evitar race conditions e prevenir deadlocks. O problema do jantar dos filósofos é uma forma prática de compreender conceitos fundamentais de Sistemas Operacionais e programação concorrente.
